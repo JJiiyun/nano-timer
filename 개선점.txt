@@ -1,0 +1,84 @@
+python -m venv 가상환경이름
+./가상환경이름/Scripts/activate
+deactivate
+
+현재 인터프리터가 3.10일 때, 가상환경만 다른 버전으로 설치하는 방법
+C:\Users\김지윤\AppData\Local\Programs\Python\Python38\python.exe -m venv hand
+
+
+3. 사용자 상태 분석
+기능 설명:
+
+땀 감지:
+적외선 카메라나 열감지 센서를 통해 사용자의 땀 여부를 확인.
+땀이 많이 난 상태에서 선풍기 강도를 높임.
+체온 감지:
+사용자 체온을 측정하여 고온 시 선풍기 작동 강화.
+추가로 에어컨 연동 가능.
+적용 기술:
+
+적외선 센서 데이터 + ML 회귀 모델(예: XGBoost, Random Forest)을 사용해 체온 예측.
+
+5. 에너지 효율 기능
+기능 설명:
+선풍기 작동 시 에너지 절약을 위한 스마트 알고리즘.
+추가 기능:
+사용자 추적 최적화:
+딥러닝 모델(예: YOLOv5)로 사용자 얼굴 위치와 움직임을 실시간으로 추적.
+사용자가 특정 시간 동안 움직임이 없으면 대기 모드 전환.
+지능형 바람 분배:
+한 공간에 여러 사람이 있을 때, 얼굴 인식으로 바람 분배.
+특정 사용자(예: 어린이)에게 바람 세기를 낮게 조절.
+
+6. 수면 모드
+기능 설명:
+
+사용자 수면 중 적절한 환경 제공.
+추가 기능:
+
+수면 단계 감지:
+사용자의 눈 움직임이나 얼굴 움직임 데이터를 분석하여 수면 단계(REM, Non-REM)를 예측.
+소음 감소 및 바람 조절:
+선풍기 소음을 줄이고, 수면 상태에 맞춰 바람 세기 자동 조절.
+적용 기술:
+
+ML/DL 모델: 사용자의 움직임 데이터를 분석해 수면 패턴 학습.
+
+7. 제스처 기반 제어
+기능 설명:
+손동작 또는 제스처로 선풍기를 제어.
+적용 기술:
+딥러닝 기반 제스처 인식 모델(Mediapipe Hands, OpenCV Hand Tracking).
+사용 예시:
+손을 흔들어 선풍기를 켜고 끔.
+손가락 제스처로 바람 세기 조절.
+
+
+주제 : Analog Discovery2 를 이용한 임피던스 칩(시약 주입) 시간 별 임피던스 측정
+
+QBasicTimer::stop: Failed. Possibly trying to stop from a different thread
+QBasicTimer::stop: Failed. Possibly trying to stop from a different thread
+QBasicTimer::stop: Failed. Possibly trying to stop from a different thread
+QObject::startTimer: Timers cannot be started from another thread
+QBasicTimer::stop: Failed. Possibly trying to stop from a different thread
+
+성훈오빠 코드 분석해서 해당 코드에서 수정 :
+impedence_subplot 에 scatter 되어있어서(아마?) 점 하나만 뜨는 문제
+싸이클 진행 중 Stop 버튼 누를 시 모두 중단 시키고
+- startFrame 모두 초기화. start_btn disabled 해제(text->start), value=0 세팅
+- ControlFrame 모두 초기화
+- MeasureFrame 초기화
+
+거기까지만 record 한 후 
+impedence_subplot 띄우기. -> .csv파일로 저장. 그리고 모두 초기화 시킴.
+
+
+1.20~1.24
+(지윤) 코드 분석, 수정 시작
+(채은) 코드 분석
+
+2.3 ~ 2.9
+(지윤, 채은) 코드 이해를 위한 스터디, 코드 수정
+
+2.10 ~ 2.16
+(지윤, 채은) 코드 수정
