@@ -1,4 +1,4 @@
-# Nano-Timer 개선 사항
+# Nano-Timer
 
 ## 최근 수정 내역
 - **Requirement.txt 업데이트**
