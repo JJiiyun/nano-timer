@@ -1,7 +1,7 @@
 # Nano-Timer
 
 ## 최근 수정 내역
-- **Requirement.txt 업데이트**
+- **[Requirement.txt 업데이트](https://github.com/JJiiyun/nano-timer/blob/main/Requirement.txt)**
 
 ## 추가 수정 필요
 - **임피던스 측정 시간 변경**
