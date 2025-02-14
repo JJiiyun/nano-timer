@@ -54,8 +54,7 @@ class StartFrame(QFrame):
         self.start_btn.setFont(QFont("Arial", 10, QFont.Bold))
         
         self.frames = {
-            'el_time': (TextFrame('Elapsed', "", unit_text="s", readOnly=True), (1,0,1,1)),
-            'cur_loop': (TextFrame('Loop', "", readOnly=True), (1,1,1,1)),
+            'el_time': (TextFrame('Elapsed', "", unit_text="s", readOnly=True), (1,0,1,1))
         }
         
         layout = QVBoxLayout()
@@ -75,7 +74,3 @@ class StartFrame(QFrame):
     def set_el_time(self, text):
         print(text)
         self.frames['el_time'][0].set_text(text)
-
-    def set_cur_loop(self, text):
-        print(text)
-        self.frames['cur_loop'][0].set_text(text)

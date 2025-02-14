@@ -29,7 +29,7 @@ class ControlFrame(QFrame):
                 border-radius: 3px;
                 padding: 5px;
                 background-color: white;
-                min-width: 150px;  /* 모든 입력 박스의 너비를 늘림 */
+                min-width: 150px;
             }
         """)
 
@@ -38,23 +38,21 @@ class ControlFrame(QFrame):
         self.layout.setSpacing(10)
         self.layout.setContentsMargins(10, 10, 10, 10)
 
-        # 상단 입력 필드들
+        # 상단 입력 필드 레이아웃 (그리드)
         input_layout = QGridLayout()
         input_layout.setSpacing(10)
 
-        # 각 입력 필드 생성
+        # 각 입력 필드 생성 (Loop와 Period 삭제, Duration 추가)
         self.freq_frame = TextFrame('Freq', "1000", unit_text="KHz", validator=QDoubleValidator())
         self.ref_frame = TextFrame('Ref', "10", unit_text="kOhm", validator=QDoubleValidator())
-        self.loop_frame = TextFrame('Loop', "1", validator=QIntValidator())
-        self.period_frame = TextFrame('Period', "1", unit_text="sec", validator=QDoubleValidator())
+        self.duration_frame = TextFrame('Duration', "30", unit_text="min", validator=QDoubleValidator())
 
-        # 입력 필드 배치
         input_layout.addWidget(self.freq_frame, 0, 0)
         input_layout.addWidget(self.ref_frame, 0, 1)
-        input_layout.addWidget(self.loop_frame, 1, 0)
-        input_layout.addWidget(self.period_frame, 1, 1)
+        # Duration 필드는 1행 전체(2열)로 배치
+        input_layout.addWidget(self.duration_frame, 1, 0, 1, 2)
 
-        # Filename 입력 필드
+        # 파일명 입력 필드
         self.filename_frame = TextFrame('Filename', "default", unit_text=".csv")
 
         # 레이아웃 조립
@@ -63,12 +61,11 @@ class ControlFrame(QFrame):
         
         self.setLayout(self.layout)
 
-        # frames dictionary
+        # frames dictionary (불필요한 항목 제거)
         self.frames = {
             'freq': (self.freq_frame, None),
             'ref': (self.ref_frame, None),
-            'loop': (self.loop_frame, None),
-            'period': (self.period_frame, None),
+            'duration': (self.duration_frame, None),
         }
 
     # Get functions
@@ -78,27 +75,22 @@ class ControlFrame(QFrame):
     def get_ref(self):
         return float(self.ref_frame.get_text())
 
-    def get_loop(self):
-        return int(self.loop_frame.get_text())
-
-    def get_period(self):
-        return float(self.period_frame.get_text())
+    def get_duration(self):
+        return float(self.duration_frame.get_text())
 
     def get_filename(self):
         return self.filename_frame.get_text()
 
-    # freq, ref, loop, period, filename -> dictionary 로 return
+    # 전체 값을 dictionary로 반환
     def get_all2dict(self):
         return {
             'freq'      : self.get_freq(),
             'ref'       : self.get_ref(),
-            'loop'      : self.get_loop(),
-            'period'    : self.get_period(),
+            'duration'  : self.get_duration(),
             'filename'  : self.get_filename(),
         }
 
-    # Util functions
-    # flag = true/false
+    # 모든 입력 필드 비활성화
     def set_disabled_all(self, flag):
         for frame, _ in self.frames.values():
             frame.editor.setDisabled(flag)

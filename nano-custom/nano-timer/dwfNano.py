@@ -96,36 +96,43 @@ class dwfImpedance:
         dwf.FDwfDigitalIOOutputSet(hdwf, c_int(port))
 
     def getScopeData(self, fr):
+        """
+        1) 함수 발생기(채널 0)의 주파수를 fr(Hz)로 설정
+        2) 함수 발생기 활성화
+        3) (짧은 안정화 대기) 
+        4) 아날로그 입력(오실로스코프) 단발 측정 시작
+        5) 측정 완료까지 대기
+        6) 두 채널 데이터 읽어서 list로 반환
+        """
+        # 1) 함수 발생기 주파수 설정
         dwf.FDwfAnalogOutNodeFrequencySet(hdwf, c_int(0), AnalogOutNodeCarrier, c_double(fr))
-        # now enable function generator and wait stabilization
-        dwf.FDwfAnalogOutConfigure(hdwf,c_int(0), c_bool(True))
-        time.sleep(0.5)
-        af = c_double()
-        dwf.FDwfAnalogOutNodeFrequencyGet(hdwf, c_int(0), AnalogOutNodeCarrier, byref(af))
-        #sampling frequency calculation, set 2*period less than self.buf_len
-        vlen = self.buf_len+1
-        tT = self.T+1
-        while vlen > self.buf_len:
-            tT = tT-1
-            sf = af.value*tT
-            asf = c_double()
-            dwf.FDwfAnalogInFrequencySet(hdwf, c_double(sf))
-            dwf.FDwfAnalogInFrequencyGet(hdwf, byref(asf))
-            vlen = int(2*asf.value/af.value)
-        #begin acquisition and wait for completion
+        
+        # 2) 함수 발생기 활성화
+        dwf.FDwfAnalogOutConfigure(hdwf, c_int(0), c_bool(True))
+        
+        # 3) 짧게 안정화 대기 (필요에 따라 0.01 ~ 0.2 등 조절 가능)
+        time.sleep(0.01)
+
+        # 4) 아날로그 입력 단발 측정 시작 (트리거/버퍼 등은 init에서 설정되었다고 가정)
         dwf.FDwfAnalogInConfigure(hdwf, c_bool(False), c_bool(True))
+
+        # 5) 측정 완료 대기
         sts = c_byte()
         while True:
             dwf.FDwfAnalogInStatus(hdwf, c_int(1), byref(sts))
-            if sts.value == DwfStateDone.value :
-                    break
-            time.sleep(0.1)
-        #get data
+            if sts.value == DwfStateDone.value:
+                break
+            # 측정이 완료될 때까지 아주 짧게 대기 (CPU 부하 vs 반응속도 균형)
+            time.sleep(0.001)
+
+        # 6) 두 채널 데이터 읽기
         dwf.FDwfAnalogInStatusData(hdwf, c_int(0), self.rg0Samples, self.buf_len)
         dwf.FDwfAnalogInStatusData(hdwf, c_int(1), self.rg1Samples, self.buf_len)
 
-        data0=list(self.rg0Samples[1:vlen])
-        data1=list(self.rg1Samples[1:vlen])
+        # 버퍼를 Python list로 변환
+        data0 = list(self.rg0Samples)
+        data1 = list(self.rg1Samples)
+
         return data0, data1
 
     def calcImpedance(self, data0, data1):

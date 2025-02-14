@@ -30,186 +30,94 @@ from dwfNano import dwfImpedance
 
 
 
+# main_ui.py (수정된 ImpedanceThread)
 class ImpedanceThread(QThread):
-
     def __init__(self, parent):
-
         super().__init__(parent)
-
         self.parent = parent
 
-    
-
     def run(self):
-
         try:
-
             freq = self.parent.control_frame.get_freq() * 1000
-
             ref = self.parent.control_frame.get_ref()
+            # Duration은 분 단위 -> 초로 변환
+            duration_minutes = self.parent.control_frame.get_duration()
+            total_duration = duration_minutes * 60
 
-            loop = self.parent.control_frame.get_loop()
+            sampling_interval = 0.01  # 0.01초마다 측정
 
-            period = self.parent.control_frame.get_period()
-
-
-
-            # 초기화
-
-            self.parent.cur_loop = 0
-
+            sample_count = 0
             start_time = time.time()
-
             last_measure_time = start_time
-
-            last_save_time = -1  # 마지막 저장 시간 초기화
-
-
-
-            self.parent.start_frame.set_cur_loop("0")
 
             self.parent.start_frame.set_el_time("0.00")
 
-
-
             while True:
-
                 if self.parent.stop_flag:
-
                     print("Stop requested")
-
                     break
 
+                current_time = time.time()
+                elapsed_time = current_time - start_time
 
-
-                if self.parent.cur_loop >= loop:
-
-                    print("Loop completed")
-
+                if elapsed_time >= total_duration:
+                    print("Timer duration reached")
                     break
 
+                if (current_time - last_measure_time) >= sampling_interval:
+                    sample_count += 1
+                    # 균일한 샘플 시간 (예: 0.01, 0.02, 0.03, ...)
+                    sample_time = sample_count * sampling_interval
+                    data0, data1, z = self.measure(freq, ref, sample_time)
+                    last_measure_time = current_time
+                    self.save_data(data0, data1, z, sample_time)
 
-
-                cur_time = time.time()
-
-                el_time = cur_time - start_time
-
-                current_second = int(el_time)  # 현재 초
-
-
-
-                # period 간격으로 측정 및 그래프 업데이트
-
-                if (cur_time - last_measure_time) >= period:
-
-                    data0, data1, z = self.measure(freq, ref, el_time)
-
-                    last_measure_time = cur_time
-
-
-
-                    # 1초 단위로 데이터 저장
-
-                    if current_second > last_save_time:
-
-                        self.save_data(data0, data1, z, current_second)
-
-                        last_save_time = current_second
-
-
-
-                # UI 업데이트 (더 자주 업데이트)
-
-                self.parent.start_frame.set_el_time(f"{el_time:.2f}")
-
-
-
-                # 약간의 딜레이를 주어 CPU 사용량 감소
-
-                self.msleep(10)
-
-
-
+                # 실제 경과시간은 타이머 표시용으로 사용
+                self.parent.start_frame.set_el_time(f"{elapsed_time:.2f}")
+                self.msleep(1)
         except Exception as e:
-
             print(f"Error in run: {e}")
-
         finally:
-
-            # 데이터 저장 및 UI 정리는 on_measurement_finished에서 처리
-
             pass
 
-
-
     def measure(self, freq, ref, measure_time):
-
         try:
-
-            # Get Scope data
-
             data0, data1 = self.parent.dwfim.getScopeData(freq)
-
-
-
-            # Calc impedance
-
             zo = self.parent.dwfim.calcImpedance(data0, data1)
-
-            z = -ref*zo
-
-
-
-            # Set UI
+            z = -ref * zo
 
             self.parent.measure_frame.set_real(f"{z.real:.3f}")
-
             self.parent.measure_frame.set_imag(f"{z.imag:.3f}")
-
             self.parent.measure_frame.set_abs(f"{abs(z):.3f}")
 
-
-
-            # 그래프 업데이트
-
+            # 그래프 업데이트 시 x축 값은 균일한 sample_time으로 전달
             self.parent.graph_frame.update_graph(data0, data1, z, measure_time)
-
-
 
             return data0, data1, z
 
-
-
         except Exception as e:
-
             print(f"Error in measure: {e}")
-
             return None, None, None
 
-
-
-    def save_data(self, data0, data1, z, time):
+    def save_data(self, data0, data1, z, time_value):
         try:
-            # 데이터 저장을 위한 DataFrame 준비 (필요한 데이터만)
             new_data = pd.DataFrame({
-                'Time(sec)': [time],
+                'Time(sec)': [time_value],
                 'real': [round(z.real, 3)],
                 'imag': [round(z.imag, 3)],
                 'abs': [round(abs(z), 3)]
             })
 
-            # 데이터 누적
             if not hasattr(self.parent, 'data'):
                 self.parent.data = new_data
             else:
                 self.parent.data = pd.concat([self.parent.data, new_data], ignore_index=True)
-
-            # loop 증가
-            self.parent.cur_loop += 1
-            self.parent.start_frame.set_cur_loop(f"{self.parent.cur_loop}")
-
         except Exception as e:
             print(f"Error in save_data: {e}")
+
+
+
+
 
 
 
@@ -433,9 +341,6 @@ class MainUI(QWidget):
 
         self.start_frame.set_el_time("0.00")
 
-        self.start_frame.set_cur_loop("0")
-
-        
 
         # 그래프 초기화하지 않음 (Start 버튼 눌렀을 때만 초기화)
 
@@ -470,10 +375,6 @@ class MainUI(QWidget):
         # 플래그 초기화
 
         self.stop_flag = False
-
-        self.cur_loop = 0
-
-
 
 
 
