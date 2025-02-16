@@ -1,34 +1,20 @@
-import sys
 
+import os, sys
 import time
-
 import threading
-
 import pandas as pd
-
-import os
-
+import numpy as np
 
 
 from PyQt5.QtCore import QThread
-
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QVBoxLayout, QHBoxLayout
 
-
-
 from ui.control import ControlFrame
-
 from ui.measure import MeasureFrame
-
 from ui.start import StartFrame
-
 from ui.graph import GraphFrame
 
-
-
 from dwfNano import dwfImpedance
-
-
 
 # main_ui.py (수정된 ImpedanceThread)
 class ImpedanceThread(QThread):
@@ -44,9 +30,7 @@ class ImpedanceThread(QThread):
             duration_minutes = self.parent.control_frame.get_duration()
             total_duration = duration_minutes * 60
 
-            sampling_interval = 0.01  # 0.01초마다 측정
-
-            sample_count = 0
+            sampling_interval = 0.005  # 측정 주기 (초)
             start_time = time.time()
             last_measure_time = start_time
 
@@ -65,20 +49,19 @@ class ImpedanceThread(QThread):
                     break
 
                 if (current_time - last_measure_time) >= sampling_interval:
-                    sample_count += 1
-                    # 균일한 샘플 시간 (예: 0.01, 0.02, 0.03, ...)
-                    sample_time = sample_count * sampling_interval
-                    data0, data1, z = self.measure(freq, ref, sample_time)
+                    # 실제 경과 시간을 사용하여 측정 및 저장
+                    data0, data1, z = self.measure(freq, ref, elapsed_time)
                     last_measure_time = current_time
-                    self.save_data(data0, data1, z, sample_time)
+                    self.save_data(data0, data1, z, elapsed_time)
 
-                # 실제 경과시간은 타이머 표시용으로 사용
+                # 타이머 업데이트에 실제 경과 시간 사용
                 self.parent.start_frame.set_el_time(f"{elapsed_time:.2f}")
                 self.msleep(1)
         except Exception as e:
             print(f"Error in run: {e}")
         finally:
             pass
+
 
     def measure(self, freq, ref, measure_time):
         try:
@@ -98,20 +81,37 @@ class ImpedanceThread(QThread):
         except Exception as e:
             print(f"Error in measure: {e}")
             return None, None, None
+        
 
     def save_data(self, data0, data1, z, time_value):
         try:
+            max_voltage0 = np.max(data0) if data0 else 0
+            min_voltage0 = np.min(data0) if data0 else 0
+            avg_voltage0 = np.mean(data0) if data0 else 0
+
+            max_voltage1 = np.max(data1) if data1 else 0
+            min_voltage1 = np.min(data1) if data1 else 0
+            avg_voltage1 = np.mean(data1) if data1 else 0
+
             new_data = pd.DataFrame({
                 'Time(sec)': [time_value],
                 'real': [round(z.real, 3)],
                 'imag': [round(z.imag, 3)],
-                'abs': [round(abs(z), 3)]
+                'abs': [round(abs(z), 3)],
+                'Max Voltage CH1': [round(max_voltage0, 6)],
+                'Min Voltage CH1': [round(min_voltage0, 6)],
+                'Avg Voltage CH1': [round(avg_voltage0, 6)],
+                'Max Voltage CH2': [round(max_voltage1, 6)],
+                'Min Voltage CH2': [round(min_voltage1, 6)],
+                'Avg Voltage CH2': [round(avg_voltage1, 6)]
             })
 
-            if not hasattr(self.parent, 'data'):
+            if not hasattr(self.parent, 'data') or not isinstance(self.parent.data, pd.DataFrame):
                 self.parent.data = new_data
             else:
                 self.parent.data = pd.concat([self.parent.data, new_data], ignore_index=True)
+
+            self.parent.data = self.parent.data.copy()
         except Exception as e:
             print(f"Error in save_data: {e}")
 
@@ -120,102 +120,48 @@ class ImpedanceThread(QThread):
 
 
 
-
 from PyQt5.QtCore import pyqtSlot, pyqtSignal
 
-
-
 class MainUI(QWidget):
-
     update_signal = pyqtSignal(float, int, object)  # GUI 업데이트를 위한 Signal
 
-
-
     def __init__(self):
-
         super().__init__()
-
-        
-
         self.dwfim = dwfImpedance()
-
         self.dwf_thread = ImpedanceThread(self)
-
-
-
-        self.initUI()
-
-        
+        self.initUI()    
 
     def initUI(self):
-
         self.setWindowTitle("NanoDrop-timer")
-
         self.setGeometry(100, 100, 1000, 850)
-
         self.setMinimumSize(1000, 850)
 
-        
-
         # Frame definition with spacing
-
         self.graph_frame = GraphFrame()
-
         self.control_frame = ControlFrame()
-
         self.measure_frame = MeasureFrame()
-
         self.start_frame = StartFrame()
 
-        
-
         # Connect start button event
-
         self.start_frame.start_btn.clicked.connect(self.startButtonEvent)
 
-
-
         # Main layout
-
         main_layout = QVBoxLayout()
-
         main_layout.setSpacing(10)
-
         main_layout.setContentsMargins(10, 10, 10, 10)
-
-        
-
+     
         # Graph area
-
         main_layout.addWidget(self.graph_frame, stretch=1)
 
-        
-
         # Control area
-
         control_layout = QHBoxLayout()
-
         control_layout.setSpacing(10)
-
-        
-
         control_layout.addWidget(self.control_frame, stretch=4)
-
         control_layout.addWidget(self.measure_frame, stretch=3)
-
         control_layout.addWidget(self.start_frame, stretch=3)
 
-        
-
         main_layout.addLayout(control_layout)
-
-        
-
         self.setLayout(main_layout)
-
-
-
-        self.cur_loop = 0
 
         self.stop_flag = False
 
@@ -224,162 +170,85 @@ class MainUI(QWidget):
 
 
     def startButtonEvent(self):
-
         start_btn = self.start_frame.start_btn
 
-
-
         if start_btn.isChecked():
-
-            # Start 버튼이 눌렸을 때
-
             self.stop_flag = False
-
             self.control_frame.set_disabled_all(True)
-
-            
-
-            # 그래프 초기화는 Start 버튼 눌렀을 때만
-
             self.graph_frame.init_subplots()
 
-            
-
-            # 데이터프레임 초기화 (필요한 컬럼만)
-
-            self.data = pd.DataFrame(columns=['Time(sec)', 'real', 'imag', 'abs'])
-
-            
-
-            # UI 업데이트
+            # 전체 컬럼을 포함하는 데이터프레임 초기화
+            self.data = pd.DataFrame(columns=[
+                'Time(sec)', 'real', 'imag', 'abs',
+                'Max Voltage CH1', 'Min Voltage CH1', 'Avg Voltage CH1',
+                'Max Voltage CH2', 'Min Voltage CH2', 'Avg Voltage CH2'
+            ])
 
             start_btn.setText("Stop")
-
             start_btn.setProperty("state", "stop")
-
             start_btn.style().unpolish(start_btn)
-
             start_btn.style().polish(start_btn)
 
-            
-
-            # 새로운 쓰레드 생성 및 시작
-
             self.dwf_thread = ImpedanceThread(self)
-
             self.dwf_thread.finished.connect(self.on_measurement_finished)
-
             self.dwf_thread.start()
 
-
-
         else:
-
-            # Stop 버튼이 눌렸을 때
-
             self.stop_flag = True
-
-            start_btn.setDisabled(True)  # 버튼 비활성화 (측정 완료될 때까지)
+            start_btn.setDisabled(True)
 
 
 
     def on_measurement_finished(self):
-
-        # 데이터 저장
-
-        if hasattr(self, 'data') and not self.data.empty:
-
+        # self.data가 존재하고 비어있지 않으면 CSV 저장 작업 수행
+        if hasattr(self, 'data') and isinstance(self.data, pd.DataFrame) and not self.data.empty:
             try:
-
-                # 현재 스크립트의 디렉토리 경로를 기준으로 data 폴더 경로 설정
-
+                # 현재 파일의 부모 디렉토리를 기준으로 data 폴더 지정
                 current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
                 data_dir = os.path.join(current_dir, "data")
-
-                
-
-                # data 디렉토리가 없으면 생성
-
                 if not os.path.exists(data_dir):
-
                     os.makedirs(data_dir)
 
-
-
-                # CSV 파일로 저장
-
                 filename = os.path.join(data_dir, f"{self.control_frame.get_filename()}.csv")
-
                 self.data.to_csv(filename, index=False, encoding='utf-8-sig')
-
                 print(f"Data saved to {filename}")
-
-                
-
             except Exception as e:
-
                 print(f"Error saving data: {e}")
 
-
-
         # UI 초기화
-
         self.reset_ui()
 
 
 
+
     def reset_ui(self):
-
         # 측정값 초기화
-
         self.measure_frame.reset_all()
 
-        
-
         # 타이머 초기화
-
         self.start_frame.set_el_time("0.00")
 
-
         # 그래프 초기화하지 않음 (Start 버튼 눌렀을 때만 초기화)
-
         # self.graph_frame.init_subplots()  # 이 줄 제거
 
-        
-
         # 입력 필드 활성화
-
         self.control_frame.set_disabled_all(False)
 
-        
-
         # Start 버튼 초기화
-
         start_btn = self.start_frame.start_btn
-
         start_btn.setText("Start")
-
         start_btn.setProperty("state", "start")
-
         start_btn.style().unpolish(start_btn)
-
         start_btn.style().polish(start_btn)
-
         start_btn.setChecked(False)
-
         start_btn.setEnabled(True)
 
-        
-
         # 플래그 초기화
-
         self.stop_flag = False
 
 
 
     def start(self):
-
         self.dwf_thread.start()
 
 

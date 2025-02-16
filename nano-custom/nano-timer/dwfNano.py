@@ -111,7 +111,7 @@ class dwfImpedance:
         dwf.FDwfAnalogOutConfigure(hdwf, c_int(0), c_bool(True))
         
         # 3) 짧게 안정화 대기 (필요에 따라 0.01 ~ 0.2 등 조절 가능)
-        time.sleep(0.01)
+        time.sleep(0.005)
 
         # 4) 아날로그 입력 단발 측정 시작 (트리거/버퍼 등은 init에서 설정되었다고 가정)
         dwf.FDwfAnalogInConfigure(hdwf, c_bool(False), c_bool(True))
@@ -123,7 +123,7 @@ class dwfImpedance:
             if sts.value == DwfStateDone.value:
                 break
             # 측정이 완료될 때까지 아주 짧게 대기 (CPU 부하 vs 반응속도 균형)
-            time.sleep(0.001)
+            time.sleep(0.005)
 
         # 6) 두 채널 데이터 읽기
         dwf.FDwfAnalogInStatusData(hdwf, c_int(0), self.rg0Samples, self.buf_len)
