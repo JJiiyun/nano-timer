@@ -5,7 +5,9 @@
 - Data writing, show Impedence value per 50ms
 - Change Loop, Period variable to Duration(min)
 - Add Max voltage, Min voltage, Average voltage attribution to .csv file
-
+- **Distribute Virtual Machine(Ubuntu). 나스에 배포하였음**
+  
 ## 추가 수정 필요
 - **Delete Real/imag/Abs Frame**
-- **Distribute Virtual Machine(Ubuntu)**
+- PySide6로 새로 구현하기.
+
