@@ -9,5 +9,5 @@
   
 ## 추가 수정 필요
 - **Delete Real/imag/Abs Frame**
-- Electornjs 로 GUI 다시 구현하기
+- Electornjs로 GUI 다시 구현하기
 
