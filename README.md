@@ -57,10 +57,11 @@ Nano-Timer는 측정 결과를 `.csv` 파일로 저장합니다. 컬럼 구성�
 | Min voltage CH2     | CH2에서 측정된 최소 전압                  |
 | Avg voltage CH2     | CH2에서 측정된 평균 전압                  |
 
+---
 
 ## 추가 수정 필요 (To-do)
 - **Delete Real/imag/Abs Frame**  
   GUI 상에서 Real/Imag/Abs를 표시하던 프레임 제거
-- **Electron.js로 GUI 다시 구현**  
-  크로스플랫폼 및 웹 기술을 활용하여, 더 편리한 GUI 환경을 제공할 예정
+- **C++, Qt Framework로 GUI 다시 구현**  
+  크로스플랫폼 가능한 C++과 Qt Framework로 프로그램, 앱, 웹 등 더 편리한 GUI 환경을 제공할 예정
 
