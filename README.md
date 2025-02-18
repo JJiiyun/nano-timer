@@ -3,7 +3,8 @@
 ---
 
 ## 소개 (Introduction)
-`Nano-Timer`는 전압 측정, 임피던스(Real/Imag/Abs) 계산 등을 수행하는 소프트웨어입니다. 최근에는 VM(Ubuntu) 환경으로 배포되어 손쉽게 환경 설정이 가능합니다.
+`Nano-Timer`는 Analog Discovery2를 이용해 전압 측정, 임피던스(Real/Imag/Abs) 계산 등을 수행하는 소프트웨어입니다.
+최근에는 VM(Ubuntu) 환경으로 배포되어 손쉽게 환경 설정이 가능합니다.
 
 ---
 
