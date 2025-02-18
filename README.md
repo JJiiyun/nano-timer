@@ -21,7 +21,9 @@
 
 ---
 
-<img src="https://github.com/user-attachments/assets/10ab91b3-ee18-4438-b19a-ec68977a23d4" width="55%" height="55%" alt="Ubuntu VM Screenshot">
+<img src="https://github.com/user-attachments/assets/10ab91b3-ee18-4438-b19a-ec68977a23d4" width="55%" height="55%" alt="Before Run Nano-Timer">
+<img src="https://github.com/user-attachments/assets/4e27040e-f828-4b94-bb64-9b07e5ff02b8" width="55%" height="55%" alt="After Run Nano-Timer">
+
 
 > **그림 1.** Nano-Timer가 동작하는 모습 (예시)
 
