@@ -1,7 +1,7 @@
 """
 NanoDropper library
 """
-from ctypes import * # C로 작성한 .so, .dll을 이용할 수 있도록 해주는 라이브러리.
+from ctypes import *
 import time
 import threading
 import cmath as cm
@@ -23,7 +23,7 @@ class dwfImpedance:
 
         self.rg0Samples = (c_double*self.buf_len)()
         self.rg1Samples = (c_double*self.buf_len)()
-
+        self._status_timeout_sec = 2.0 # 250828
 
 
     def _dwf_init(self):
@@ -35,7 +35,8 @@ class dwfImpedance:
             dwf.FDwfGetLastErrorMsg(szerr)
             print(szerr.value)
             print("failed to open device(AD2 connecting required.)")
-            quit()
+            # 앱 전체 종료 대신 예외를 던져 UI에서 처리
+            raise RuntimeError("Failed to open DWF device. Connect the device and try again.")
 
         self._set_power_supply(V=5)
 
@@ -74,7 +75,8 @@ class dwfImpedance:
         self.T, self.nT = T, nT
         self.buf_len = T*nT
 
-        dwf.FDwfAnalogInBufferSizeSet(hdwf, c_int(2*self.buf_len)) 
+        # Set hardware buffer size to match allocated Python buffers - 250828
+        dwf.FDwfAnalogInBufferSizeSet(hdwf, c_int(self.buf_len)) 
         dwf.FDwfAnalogInChannelEnableSet(hdwf, c_int(0), c_bool(True))
         dwf.FDwfAnalogInChannelRangeSet(hdwf, c_int(0), c_double(0.5))
         dwf.FDwfAnalogInChannelEnableSet(hdwf, c_int(1), c_bool(True))
@@ -112,28 +114,58 @@ class dwfImpedance:
         
         # 3) 짧게 안정화 대기 (필요에 따라 0.01 ~ 0.2 등 조절 가능)
         time.sleep(0.005)
+        af = c_double()
+        dwf.FDwfAnalogOutNodeFrequencyGet(hdwf, c_int(0), AnalogOutNodeCarrier, byref(af))
+        vlen = self.buf_len+1
+        tT = self.T+1
+        while vlen > self.buf_len:
+            tT = tT-1
+            sf = af.value*tT
+            asf = c_double()
+            dwf.FDwfAnalogInFrequencySet(hdwf, c_double(sf))
+            dwf.FDwfAnalogInFrequencyGet(hdwf, byref(asf))
+            vlen = int(2*asf.value/af.value)
 
         # 4) 아날로그 입력 단발 측정 시작 (트리거/버퍼 등은 init에서 설정되었다고 가정)
         dwf.FDwfAnalogInConfigure(hdwf, c_bool(False), c_bool(True))
 
-        # 5) 측정 완료 대기
+        # 5) 측정 완료 대기 (타임아웃 포함)
         sts = c_byte()
+        t0 = time.time()
         while True:
             dwf.FDwfAnalogInStatus(hdwf, c_int(1), byref(sts))
             if sts.value == DwfStateDone.value:
                 break
             # 측정이 완료될 때까지 아주 짧게 대기 (CPU 부하 vs 반응속도 균형)
             time.sleep(0.005)
+            if (time.time() - t0) > self._status_timeout_sec:
+                raise TimeoutError("AnalogIn status wait timed out")
 
         # 6) 두 채널 데이터 읽기
         dwf.FDwfAnalogInStatusData(hdwf, c_int(0), self.rg0Samples, self.buf_len)
         dwf.FDwfAnalogInStatusData(hdwf, c_int(1), self.rg1Samples, self.buf_len)
 
         # 버퍼를 Python list로 변환
-        data0 = list(self.rg0Samples)
-        data1 = list(self.rg1Samples)
+        data0 = list(self.rg0Samples[1:vlen])
+        data1 = list(self.rg1Samples[1:vlen])
 
         return data0, data1
+
+    def close(self):
+        """Reset instruments and close the DWF device."""
+        try:
+            # Reset subsystems
+            dwf.FDwfAnalogInReset(hdwf)
+            dwf.FDwfAnalogOutReset(hdwf, c_int(0))
+            dwf.FDwfAnalogOutReset(hdwf, c_int(1))
+            # Disable power supplies
+            dwf.FDwfAnalogIOEnableSet(hdwf, c_int(False))
+        except Exception:
+            pass
+        try:
+            dwf.FDwfDeviceClose(hdwf)
+        except Exception:
+            pass
 
     def calcImpedance(self, data0, data1):
         R0, T0, M0 = fs.sineFit2Cycle(data0, self.nT)
